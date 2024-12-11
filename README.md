@@ -5,7 +5,7 @@ Aplikasi Unity WebSocket client yang dapat berkomunikasi dengan server WebSocket
 ## Konfigurasi
 
 1. Jalankan server websocket dari repository berikut: https://github.com/hisyam99/deno-websocket-server
-2. Buka file `WebSocketClient.cs` dan setting alamat server WebSocket yang ingin digunakan.
+2. Buka file `Assets/WebSocketClient.cs` dan setting alamat server WebSocket yang ingin digunakan.
 3. Setting token autentikasi yang digunakan untuk menghubungkan ke server WebSocket.
 
 ## Menjalankan Aplikasi
