@@ -1,0 +1,53 @@
+.container {
+    flex-grow: 1;
+    padding: 10px;
+    background-color: rgb(44, 44, 44);
+    color: rgb(255, 255, 255);
+}
+
+.connection-status {
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    margin-bottom: 10px;
+}
+
+.message-log {
+    flex-grow: 1;
+    background-color: rgb(28, 28, 28);
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.message-log > .unity-scroll-view__content-container {
+    padding: 5px;
+}
+
+.input-container {
+    flex-direction: column;
+}
+
+.message-input {
+    margin-bottom: 10px;
+}
+
+.button-group {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.button {
+    padding: 10px;
+    border-radius: 5px;
+    min-width: 100px;
+}
+
+.broadcast-button {
+    background-color: rgb(76, 175, 80);
+    color: rgb(255, 255, 255);
+}
+
+.private-message-button {
+    background-color: rgb(33, 150, 243);
+    color: rgb(255, 255, 255);
+}

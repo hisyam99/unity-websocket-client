@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="project://database/Assets/UI/Styles/WebSocketUI.uss" />
+    
+    <ui:VisualElement name="container" class="container">
+        <ui:Label 
+            name="ConnectionStatus" 
+            text="Disconnected" 
+            class="connection-status" 
+        />
+        
+        <ui:ScrollView 
+            name="MessageLog" 
+            class="message-log" 
+            vertical-scroller-visibility="AlwaysVisible"
+        />
+        
+        <ui:VisualElement class="input-container">
+            <ui:TextField 
+                name="MessageInput" 
+                placeholder-text="Enter your message" 
+                class="message-input"
+            />
+            
+            <ui:VisualElement class="button-group">
+                <ui:Button 
+                    name="BroadcastButton" 
+                    text="Broadcast" 
+                    class="button broadcast-button"
+                />
+                <ui:Button 
+                    name="PrivateMessageButton" 
+                    text="Private Msg" 
+                    class="button private-message-button"
+                />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
