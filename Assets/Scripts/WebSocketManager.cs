@@ -3,201 +3,406 @@ using UnityEngine.UIElements;
 using WebSocketSharp;
 using System;
 using Newtonsoft.Json;
-using System.Collections;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 
+/// <summary>
+/// Kelas utama untuk mengelola koneksi WebSocket dan interaksi antarmuka pengguna dalam aplikasi Unity.
+/// Menangani komunikasi real-time, pesan broadcast, dan pesan pribadi.
+/// </summary>
 public class WebSocketManager : MonoBehaviour
 {
-    [SerializeField] private UIDocument uiDocument;
-    private WebSocket ws;
-    private string authToken = "12345";
+    // Konfigurasi koneksi WebSocket
+    [SerializeField] private UIDocument uiDocument; // Dokumen UI untuk referensi elemen antarmuka
+    [SerializeField] private string serverUrl = "wss://websockettest.deno.dev"; // URL server WebSocket
+    [SerializeField] private string defaultRoomId = "room1"; // Ruang default untuk bergabung
+    [SerializeField] private string authToken = "12345"; // Token otentikasi untuk keamanan
 
-    // UI Elements
-    private Label connectionStatusLabel;
-    private TextField messageInputField;
-    private Button broadcastButton;
-    private Button privateMessageButton;
-    private ScrollView messageLogView;
+    // Referensi internal untuk elemen UI dan koneksi
+    private UIElements _ui; // Kelas bersarang untuk menyimpan referensi elemen UI
+    private WebSocket _webSocket; // Objek WebSocket untuk koneksi
+    private string _clientId = string.Empty; // Pengidentifikasi unik untuk klien
 
+    /// <summary>
+    /// Kelas bersarang untuk mengorganisir referensi elemen UI.
+    /// Membantu dalam pengelolaan dan akses elemen antarmuka dengan lebih terstruktur.
+    /// </summary>
+    private class UIElements
+    {
+        public Label ConnectionStatus; // Label untuk menampilkan status koneksi
+        public TextField MessageInput; // Bidang teks untuk input pesan
+        public TextField TargetUserIdInput; // Bidang teks untuk ID pengguna target
+        public Button BroadcastButton; // Tombol untuk mengirim pesan broadcast
+        public Button PrivateMessageButton; // Tombol untuk mengirim pesan pribadi
+        public ScrollView MessageLog; // Tampilan gulir untuk log pesan
+    }
+
+    /// <summary>
+    /// Metode yang dipanggil saat inisialisasi script.
+    /// Memvalidasi dokumen UI, menginisialisasi referensi, dan menyiapkan pengendali acara.
+    /// </summary>
     private void Awake()
+    {
+        ValidateUIDocument(); // Memeriksa apakah dokumen UI valid
+        InitializeUIReferences(); // Menginisialisasi referensi elemen UI
+        SetupUIEventHandlers(); // Menyiapkan pengendali acara untuk tombol
+    }
+
+    /// <summary>
+    /// Metode yang dipanggil setelah Awake.
+    /// Mengatur mode latar belakang dan memulai koneksi WebSocket.
+    /// </summary>
+    private void Start()
+    {
+        Application.runInBackground = true; // Memungkinkan aplikasi berjalan di latar belakang
+        ConnectToWebSocket(); // Memulai koneksi WebSocket
+    }
+
+    /// <summary>
+    /// Memvalidasi keberadaan dokumen UI.
+    /// Menonaktifkan script jika dokumen UI tidak ditetapkan.
+    /// </summary>
+    private void ValidateUIDocument()
     {
         if (uiDocument == null)
         {
-            Debug.LogError("UI Document is not assigned in the Inspector!");
-            return;
+            Debug.LogError("[WebSocketManager] Dokumen UI tidak ditetapkan di Inspector!");
+            enabled = false; // Menonaktifkan script jika dokumen UI hilang
         }
-        SetupUI();
     }
 
-    private void Start()
-    {
-        Application.runInBackground = true; // Ensure WebSocket runs in background
-        ConnectToServer();
-    }
-
-    private void SetupUI()
+    /// <summary>
+    /// Menginisialisasi referensi untuk semua elemen UI yang diperlukan.
+    /// Menggunakan metode Query (Q) untuk mengakses elemen dari dokumen UI.
+    /// </summary>
+    private void InitializeUIReferences()
     {
         var root = uiDocument.rootVisualElement;
-
-        connectionStatusLabel = root.Q<Label>("ConnectionStatus");
-        messageInputField = root.Q<TextField>("MessageInput");
-        broadcastButton = root.Q<Button>("BroadcastButton");
-        privateMessageButton = root.Q<Button>("PrivateMessageButton");
-        messageLogView = root.Q<ScrollView>("MessageLog");
-
-        broadcastButton.clicked += () => SendBroadcastMessage(messageInputField.value);
-        privateMessageButton.clicked += () => SendPrivateMessage("some-target-id", messageInputField.value);
+        _ui = new UIElements
+        {
+            ConnectionStatus = root.Q<Label>("ConnectionStatus"),
+            MessageInput = root.Q<TextField>("MessageInput"),
+            TargetUserIdInput = root.Q<TextField>("TargetUserIdInput"),
+            BroadcastButton = root.Q<Button>("BroadcastButton"),
+            PrivateMessageButton = root.Q<Button>("PrivateMessageButton"),
+            MessageLog = root.Q<ScrollView>("MessageLog")
+        };
     }
 
-    private void ConnectToServer()
+    /// <summary>
+    /// Menyiapkan pengendali acara untuk tombol broadcast dan pesan pribadi.
+    /// Mendefinisikan tindakan yang akan dijalankan saat tombol diklik.
+    /// </summary>
+    private void SetupUIEventHandlers()
     {
-        ws = new WebSocket("ws://localhost:4000");
+        // Mengirim pesan broadcast saat tombol broadcast diklik
+        _ui.BroadcastButton.clicked += () => SendBroadcastMessage(_ui.MessageInput.value);
 
-        ws.OnOpen += (sender, e) =>
-        {
-            UpdateConnectionStatus("Connected", Color.green);
-            SendJoinRequest();
-        };
-
-        ws.OnMessage += (sender, e) =>
-        {
-            HandleServerMessage(e.Data);
-        };
-
-        ws.OnError += (sender, e) =>
-        {
-            UpdateConnectionStatus($"Error: {e.Message}", Color.red);
-        };
-
-        ws.OnClose += (sender, e) =>
-        {
-            UpdateConnectionStatus("Disconnected", Color.yellow);
-        };
-
-        ws.Connect();
+        // Mengirim pesan pribadi saat tombol pesan pribadi diklik
+        _ui.PrivateMessageButton.clicked += () =>
+            SendPrivateMessage(_ui.TargetUserIdInput.value, _ui.MessageInput.value);
     }
 
+    /// <summary>
+    /// Memulai koneksi WebSocket dengan mengkonfigurasi dan membuat koneksi.
+    /// </summary>
+    private void ConnectToWebSocket()
+    {
+        _webSocket = new WebSocket(serverUrl); // Membuat instance WebSocket dengan URL server
+        ConfigureWebSocketEvents(); // Menyiapkan event handler untuk WebSocket
+        EstablishConnection(); // Memulai koneksi
+    }
+
+    /// <summary>
+    /// Mengkonfigurasi protokol SSL dan event handler untuk koneksi WebSocket.
+    /// Menyiapkan metode callback untuk berbagai kondisi koneksi.
+    /// </summary>
+    private void ConfigureWebSocketEvents()
+    {
+        // Mengatur protokol SSL untuk keamanan koneksi
+        _webSocket.SslConfiguration.EnabledSslProtocols =
+            System.Security.Authentication.SslProtocols.Tls12;
+
+        // Mendaftarkan event handler untuk berbagai kondisi koneksi
+        _webSocket.OnOpen += HandleConnectionOpen;
+        _webSocket.OnMessage += HandleIncomingMessage;
+        _webSocket.OnError += HandleConnectionError;
+        _webSocket.OnClose += HandleConnectionClosed;
+    }
+
+    /// <summary>
+    /// Mencoba membuat koneksi WebSocket.
+    /// Menangkap dan mencatat kesalahan jika koneksi gagal.
+    /// </summary>
+    private void EstablishConnection()
+    {
+        try
+        {
+            _webSocket.Connect(); // Memulai koneksi WebSocket
+        }
+        catch (Exception ex)
+        {
+            // Memperbarui status koneksi dengan pesan kesalahan
+            UpdateConnectionStatus($"Koneksi gagal: {ex.Message}", Color.red);
+        }
+    }
+
+    /// <summary>
+    /// Menangani event saat koneksi WebSocket berhasil dibuka.
+    /// Memperbarui status koneksi dan mengirim permintaan bergabung.
+    /// </summary>
+    private void HandleConnectionOpen(object sender, EventArgs e)
+    {
+        // Memastikan pembaruan dilakukan di thread utama Unity
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        {
+            UpdateConnectionStatus("Terhubung", Color.green);
+            SendJoinRequest(); // Mengirim permintaan untuk bergabung ke ruang
+        });
+    }
+
+    /// <summary>
+    /// Menangani pesan masuk dari server WebSocket.
+    /// Memastikan pemrosesan pesan dilakukan di thread utama Unity.
+    /// </summary>
+    private void HandleIncomingMessage(object sender, MessageEventArgs e)
+    {
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        {
+            ProcessServerMessage(e.Data);
+        });
+    }
+
+    /// <summary>
+    /// Menangani kesalahan koneksi WebSocket.
+    /// Memperbarui status koneksi dengan informasi kesalahan.
+    /// </summary>
+    private void HandleConnectionError(object sender, ErrorEventArgs e)
+    {
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        {
+            UpdateConnectionStatus($"Kesalahan: {e.Message}", Color.red);
+        });
+    }
+
+    /// <summary>
+    /// Menangani penutupan koneksi WebSocket.
+    /// Memperbarui status koneksi sebagai terputus.
+    /// </summary>
+    private void HandleConnectionClosed(object sender, CloseEventArgs e)
+    {
+        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        {
+            UpdateConnectionStatus("Terputus", Color.yellow);
+        });
+    }
+
+    /// <summary>
+    /// Mengirim permintaan bergabung ke ruang dengan token otentikasi.
+    /// </summary>
     private void SendJoinRequest()
     {
-        Invoke("join", new Dictionary<string, string>
+        SendMessage("join", new Dictionary<string, string>
         {
-            { "roomId", "room1" },
+            { "roomId", defaultRoomId },
             { "authToken", authToken }
         });
     }
 
+    /// <summary>
+    /// Memperbarui label status koneksi dengan warna dan pesan yang diberikan.
+    /// Mencatat pesan status ke log.
+    /// </summary>
+    /// <param name="status">Pesan status koneksi</param>
+    /// <param name="color">Warna label status</param>
     private void UpdateConnectionStatus(string status, Color color)
-{
-    connectionStatusLabel.text = status;
-    connectionStatusLabel.style.color = new StyleColor(color);
-    StartCoroutine(AddMessageToLogCoroutine($"[STATUS] {status}"));
-}
-
-
-    private IEnumerator UpdateConnectionStatusCoroutine(string status, Color color)
     {
-        yield return null;
-        connectionStatusLabel.text = status;
-        connectionStatusLabel.style.color = new StyleColor(color);
+        _ui.ConnectionStatus.text = status;
+        _ui.ConnectionStatus.style.color = new StyleColor(color);
+        LogMessage($"[STATUS] {status}");
     }
 
-    private void HandleServerMessage(string message)
-{
-    try
+    /// <summary>
+    /// Memproses pesan yang diterima dari server.
+    /// Melakukan parsing JSON dan menangani event spesifik.
+    /// </summary>
+    /// <param name="message">Pesan JSON dari server</param>
+    private void ProcessServerMessage(string message)
     {
-        // Parsing pesan JSON dari server
-        var messageArray = JsonConvert.DeserializeObject<object[]>(message);
-        if (messageArray != null && messageArray.Length >= 1)
+        try
         {
-            string eventName = messageArray[0]?.ToString();
+            // Mengurai pesan JSON menjadi array objek
+            var messageArray = JsonConvert.DeserializeObject<object[]>(message);
+            if (messageArray == null || messageArray.Length < 1)
+            {
+                LogMessage("[KESALAHAN] Format pesan tidak valid.");
+                return;
+            }
+
+            // Ekstrak nama event dan data
+            string eventName = messageArray[0].ToString();
             object eventData = messageArray.Length > 1 ? messageArray[1] : null;
 
-            // Menambahkan pesan ke log
-            string logMessage = $"[RECEIVED] Event: {eventName}, Data: {JsonConvert.SerializeObject(eventData)}";
-            StartCoroutine(AddMessageToLogCoroutine(logMessage));
+            // Tangani event spesifik
+            HandleSpecificServerEvent(eventName, eventData);
         }
-        else
+        catch (Exception ex)
         {
-            StartCoroutine(AddMessageToLogCoroutine("[ERROR] Received invalid message format."));
+            Debug.LogError($"Kesalahan pemrosesan pesan: {ex.Message}");
         }
     }
-    catch (Exception ex)
-    {
-        StartCoroutine(AddMessageToLogCoroutine($"[ERROR] Failed to parse message: {ex.Message}"));
-    }
-}
 
-private IEnumerator AddMessageToLogCoroutine(string message)
-{
-    yield return null; // Tunggu 1 frame untuk memastikan UI sudah siap
-
-    // Buat elemen label baru untuk pesan
-    var logEntry = new Label($"[{DateTime.Now:HH:mm:ss}] {message}")
+    /// <summary>
+    /// Menangani berbagai jenis event yang diterima dari server.
+    /// </summary>
+    /// <param name="eventName">Nama event</param>
+    /// <param name="eventData">Data terkait event</param>
+    private void HandleSpecificServerEvent(string eventName, object eventData)
     {
-        style =
+        switch (eventName)
         {
-            marginTop = 5,
-            marginBottom = 5,
-            color = new StyleColor(Color.white),
-            unityFontStyleAndWeight = FontStyle.Normal
+            case "welcome":
+                HandleWelcomeEvent(eventData);
+                break;
+            case "message":
+                HandleBroadcastMessage(eventData);
+                break;
+            case "privateMessage":
+                HandlePrivateMessage(eventData);
+                break;
+            case "error":
+                LogMessage($"[KESALAHAN] {eventData}");
+                break;
+            default:
+                LogMessage($"[TIDAK DIKENALI] Event: {eventName}, Data: {JsonConvert.SerializeObject(eventData)}");
+                break;
         }
-    };
+    }
 
-    // Tambahkan pesan ke ScrollView
-    messageLogView.contentContainer.Add(logEntry);
-
-    // Scroll otomatis ke pesan terbaru
-    messageLogView.ScrollTo(logEntry);
-}
-
-    private void Invoke(string eventName, object data)
+    /// <summary>
+    /// Menangani event selamat datang dari server.
+    /// Menyimpan ID klien yang diberikan oleh server.
+    /// </summary>
+    /// <param name="eventData">Data selamat datang dari server</param>
+    private void HandleWelcomeEvent(object eventData)
     {
-        if (ws == null || ws.ReadyState != WebSocketState.Open)
+        var welcomeData = JObject.Parse(eventData.ToString());
+        _clientId = welcomeData["welcome"].ToString();
+        LogMessage($"[SELAMAT DATANG] {_clientId}");
+    }
+
+    /// <summary>
+    /// Menangani pesan broadcast yang diterima dari server.
+    /// Mencatat pesan ke log dengan informasi pengirim.
+    /// </summary>
+    /// <param name="eventData">Data pesan broadcast</param>
+    private void HandleBroadcastMessage(object eventData)
+    {
+        if (eventData is JObject broadcastData)
         {
-            StartCoroutine(AddMessageToLogCoroutine("WebSocket not ready to send message"));
+            string from = broadcastData["from"]?.ToString();
+            string content = broadcastData["message"]?.ToString();
+            LogMessage($"[BROADCAST] {from}: {content}");
+        }
+    }
+
+    /// <summary>
+    /// Menangani pesan pribadi yang diterima dari server.
+    /// Mencatat pesan ke log dengan informasi pengirim.
+    /// </summary>
+    /// <param name="eventData">Data pesan pribadi</param>
+    private void HandlePrivateMessage(object eventData)
+    {
+        if (eventData is JObject privateMessageData)
+        {
+            string from = privateMessageData["from"]?.ToString();
+            string content = privateMessageData["message"]?.ToString();
+            LogMessage($"[PRIBADI] {from}: {content}");
+        }
+    }
+
+    /// <summary>
+    /// Mencatat pesan ke log UI dengan timestamp.
+    /// Menambahkan entri log baru ke ScrollView dan menggulung ke bawah.
+    /// </summary>
+    /// <param name="message">Pesan yang akan dicatat</param>
+    private void LogMessage(string message)
+    {
+        var logEntry = new Label($"[{DateTime.Now:HH:mm:ss}] {message}")
+        {
+            style =
+            {
+                marginTop = 5,
+                marginBottom = 5,
+                color = new StyleColor(Color.white),
+                unityFontStyleAndWeight = FontStyle.Normal
+            },
+            pickingMode = PickingMode.Position
+        };
+
+        _ui.MessageLog.contentContainer.Add(logEntry);
+        _ui.MessageLog.ScrollTo(logEntry);
+        _ui.MessageLog.horizontalScroller.value = _ui.MessageLog.horizontalScroller.highValue;
+    }
+
+    /// <summary>
+    /// Metode umum untuk mengirim pesan ke server WebSocket.
+    /// Memastikan koneksi terbuka sebelum mengirim.
+    /// </summary>
+    /// <param name="eventName">Nama event</param>
+    /// <param name="data">Data yang akan dikirim</param>
+    private new void SendMessage(string eventName, object data)
+    {
+        if (_webSocket == null || _webSocket.ReadyState != WebSocketState.Open)
+        {
+            LogMessage("WebSocket tidak terhubung. Tidak dapat mengirim pesan.");
             return;
         }
 
         var message = new[] { eventName, data };
         string jsonMessage = JsonConvert.SerializeObject(message);
-        ws.Send(jsonMessage);
+        _webSocket.Send(jsonMessage);
     }
 
+    /// <summary>
+    /// Mengirim pesan broadcast ke semua pengguna dalam ruang.
+    /// Memvalidasi isi pesan sebelum mengirim.
+    /// </summary>
+    /// <param name="message">Isi pesan broadcast</param>
     private void SendBroadcastMessage(string message)
-{
-    if (string.IsNullOrWhiteSpace(message)) return;
-
-    Invoke("broadcast", new
     {
-        message = message,
-        authToken = authToken
-    });
+        if (string.IsNullOrWhiteSpace(message)) return;
 
-    StartCoroutine(AddMessageToLogCoroutine($"[SENT] Broadcast: {message}"));
-    messageInputField.value = string.Empty;
-}
+        SendMessage("broadcast", new
+        {
+            message = message,
+            authToken = authToken
+        });
 
-private void SendPrivateMessage(string targetId, string message)
-{
-    if (string.IsNullOrWhiteSpace(message)) return;
+        _ui.MessageInput.value = string.Empty;
+    }
 
-    Invoke("privateMessage", new
+    private void SendPrivateMessage(string targetId, string message)
     {
-        targetId = targetId,
-        message = message,
-        authToken = authToken
-    });
+        if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(targetId)) return;
 
-    StartCoroutine(AddMessageToLogCoroutine($"[SENT] PrivateMessage to {targetId}: {message}"));
-    messageInputField.value = string.Empty;
-}
+        SendMessage("privateMessage", new
+        {
+            targetId = targetId,
+            message = message,
+            authToken = authToken
+        });
 
+        LogMessage($"[SENT] PrivateMessage to {targetId}: {message}");
+        _ui.MessageInput.value = string.Empty;
+    }
 
     private void OnApplicationQuit()
     {
-        if (ws != null)
+        if (_webSocket != null && _webSocket.ReadyState == WebSocketState.Open)
         {
-            ws.Close();
+            _webSocket.Close();
+            LogMessage("WebSocket closed.");
         }
     }
 }
