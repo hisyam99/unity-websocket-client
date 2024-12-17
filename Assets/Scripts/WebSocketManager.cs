@@ -14,7 +14,7 @@ public class WebSocketManager : MonoBehaviour
 {
     // Konfigurasi koneksi WebSocket
     [SerializeField] private UIDocument uiDocument; // Dokumen UI untuk referensi elemen antarmuka
-    [SerializeField] private string serverUrl = "wss://websockettest.deno.dev"; // URL server WebSocket
+    [SerializeField] private string serverUrl = "wss://hisyam99-websockettest.deno.dev"; // URL server WebSocket
     [SerializeField] private string defaultRoomId = "room1"; // Ruang default untuk bergabung
     [SerializeField] private string authToken = "12345"; // Token otentikasi untuk keamanan
 
