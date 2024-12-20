@@ -17,8 +17,7 @@
     border-radius: 5px;
     padding: 6px;
     margin-bottom: 8px;
-    overflow-x: scroll; /* Mendukung scrolling horizontal */
-    overflow-y: scroll; /* Memastikan scrollbar vertikal bisa digunakan */
+    overflow: scroll;
     white-space: nowrap; /* Mencegah text wrap untuk mendukung scroll horizontal */
 }
 
@@ -29,9 +28,20 @@
     white-space: nowrap; /* Mencegah pemotongan teks */
 }
 
-
 .input-container {
     flex-direction: column;
+}
+
+.room-id-input {
+    margin-bottom: 8px;
+}
+
+.room-id-input .unity-text-input {
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 4px;
 }
 
 .user-id-input {
@@ -80,16 +90,19 @@
     color: rgb(255, 255, 255);
 }
 
+.join-room-button {
+    background-color: rgb(255, 152, 0);
+    color: rgb(255, 255, 255);
+}
+
 /* Tambahan untuk responsiveness di layar kecil */
 @media (max-width: 480px) {
     .container {
         padding: 6px;
     }
-
     .connection-status {
         font-size: 12px;
     }
-
     .button {
         min-width: 70px;
         padding: 4px;

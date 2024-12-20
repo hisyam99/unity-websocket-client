@@ -6,123 +6,121 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 
-/// <summary>
-/// Kelas utama untuk mengelola koneksi WebSocket dan interaksi antarmuka pengguna dalam aplikasi Unity.
-/// Menangani komunikasi real-time, pesan broadcast, dan pesan pribadi.
-/// </summary>
 public class WebSocketManager : MonoBehaviour
 {
-    // Konfigurasi koneksi WebSocket
-    [SerializeField] private UIDocument uiDocument; // Dokumen UI untuk referensi elemen antarmuka
-    [SerializeField] private string serverUrl = "wss://hisyam99-websockettest.deno.dev"; // URL server WebSocket
-    [SerializeField] private string defaultRoomId = "room1"; // Ruang default untuk bergabung
-    [SerializeField] private string authToken = "12345"; // Token otentikasi untuk keamanan
+    // Variabel untuk menyimpan referensi ke dokumen UI
+    [SerializeField] private UIDocument uiDocument;
+    // URL server WebSocket
+    [SerializeField] private string serverUrl = "wss://hisyam99-websockettest.deno.dev";
+    // Token autentikasi untuk keamanan
+    [SerializeField] private string authToken = "12345";
+    // Objek untuk menyimpan referensi elemen UI
+    private UIElements _ui;
+    // Objek WebSocket untuk koneksi
+    private WebSocket _webSocket;
+    // ID klien yang diberikan oleh server
+    private string _clientId = string.Empty;
+    // ID ruang saat ini, default adalah "room1"
+    private string _currentRoomId = "room1"; // Default room ID
 
-    // Referensi internal untuk elemen UI dan koneksi
-    private UIElements _ui; // Kelas bersarang untuk menyimpan referensi elemen UI
-    private WebSocket _webSocket; // Objek WebSocket untuk koneksi
-    private string _clientId = string.Empty; // Pengidentifikasi unik untuk klien
-
-    /// <summary>
-    /// Kelas bersarang untuk mengorganisir referensi elemen UI.
-    /// Membantu dalam pengelolaan dan akses elemen antarmuka dengan lebih terstruktur.
-    /// </summary>
+    // Kelas bersarang untuk mengorganisir referensi elemen UI
     private class UIElements
     {
-        public Label ConnectionStatus; // Label untuk menampilkan status koneksi
-        public TextField MessageInput; // Bidang teks untuk input pesan
-        public TextField TargetUserIdInput; // Bidang teks untuk ID pengguna target
-        public Button BroadcastButton; // Tombol untuk mengirim pesan broadcast
-        public Button PrivateMessageButton; // Tombol untuk mengirim pesan pribadi
-        public ScrollView MessageLog; // Tampilan gulir untuk log pesan
+        // Label untuk menampilkan status koneksi
+        public Label ConnectionStatus;
+        // Bidang teks untuk input pesan
+        public TextField MessageInput;
+        // Bidang teks untuk ID pengguna target
+        public TextField TargetUserIdInput;
+        // Bidang teks untuk input ID ruang
+        public TextField RoomIdInput; // New input for room ID
+        // Tombol untuk mengirim pesan broadcast
+        public Button BroadcastButton;
+        // Tombol untuk mengirim pesan pribadi
+        public Button PrivateMessageButton;
+        // Tombol untuk bergabung ke ruang
+        public Button JoinRoomButton; // New button to join a room
+        // Tampilan gulir untuk log pesan
+        public ScrollView MessageLog;
     }
 
-    /// <summary>
-    /// Metode yang dipanggil saat inisialisasi script.
-    /// Memvalidasi dokumen UI, menginisialisasi referensi, dan menyiapkan pengendali acara.
-    /// </summary>
+    // Metode yang dipanggil saat inisialisasi script
     private void Awake()
     {
-        ValidateUIDocument(); // Memeriksa apakah dokumen UI valid
-        InitializeUIReferences(); // Menginisialisasi referensi elemen UI
-        SetupUIEventHandlers(); // Menyiapkan pengendali acara untuk tombol
+        // Memvalidasi dokumen UI
+        ValidateUIDocument();
+        // Menginisialisasi referensi elemen UI
+        InitializeUIReferences();
+        // Menyiapkan pengendali acara untuk tombol
+        SetupUIEventHandlers();
     }
 
-    /// <summary>
-    /// Metode yang dipanggil setelah Awake.
-    /// Mengatur mode latar belakang dan memulai koneksi WebSocket.
-    /// </summary>
+    // Metode yang dipanggil setelah Awake
     private void Start()
     {
-        Application.runInBackground = true; // Memungkinkan aplikasi berjalan di latar belakang
-        ConnectToWebSocket(); // Memulai koneksi WebSocket
+        // Mengatur aplikasi agar dapat berjalan di latar belakang
+        Application.runInBackground = true;
+        // Memulai koneksi WebSocket
+        ConnectToWebSocket();
     }
 
-    /// <summary>
-    /// Memvalidasi keberadaan dokumen UI.
-    /// Menonaktifkan script jika dokumen UI tidak ditetapkan.
-    /// </summary>
+    // Memvalidasi keberadaan dokumen UI
     private void ValidateUIDocument()
     {
+        // Jika dokumen UI null, tampilkan pesan error dan nonaktifkan script
         if (uiDocument == null)
         {
             Debug.LogError("[WebSocketManager] Dokumen UI tidak ditetapkan di Inspector!");
-            enabled = false; // Menonaktifkan script jika dokumen UI hilang
+            enabled = false;
         }
     }
 
-    /// <summary>
-    /// Menginisialisasi referensi untuk semua elemen UI yang diperlukan.
-    /// Menggunakan metode Query (Q) untuk mengakses elemen dari dokumen UI.
-    /// </summary>
+    // Menginisialisasi referensi untuk semua elemen UI yang diperlukan
     private void InitializeUIReferences()
     {
+        // Mendapatkan elemen root dari dokumen UI
         var root = uiDocument.rootVisualElement;
+        // Membuat objek UIElements dan mengisi referensi elemen UI
         _ui = new UIElements
         {
             ConnectionStatus = root.Q<Label>("ConnectionStatus"),
             MessageInput = root.Q<TextField>("MessageInput"),
             TargetUserIdInput = root.Q<TextField>("TargetUserIdInput"),
+            RoomIdInput = root.Q<TextField>("RoomIdInput"), // New input for room ID
             BroadcastButton = root.Q<Button>("BroadcastButton"),
             PrivateMessageButton = root.Q<Button>("PrivateMessageButton"),
+            JoinRoomButton = root.Q<Button>("JoinRoomButton"), // New button to join a room
             MessageLog = root.Q<ScrollView>("MessageLog")
         };
     }
 
-    /// <summary>
-    /// Menyiapkan pengendali acara untuk tombol broadcast dan pesan pribadi.
-    /// Mendefinisikan tindakan yang akan dijalankan saat tombol diklik.
-    /// </summary>
+    // Menyiapkan pengendali acara untuk tombol
     private void SetupUIEventHandlers()
     {
         // Mengirim pesan broadcast saat tombol broadcast diklik
         _ui.BroadcastButton.clicked += () => SendBroadcastMessage(_ui.MessageInput.value);
-
         // Mengirim pesan pribadi saat tombol pesan pribadi diklik
-        _ui.PrivateMessageButton.clicked += () =>
-            SendPrivateMessage(_ui.TargetUserIdInput.value, _ui.MessageInput.value);
+        _ui.PrivateMessageButton.clicked += () => SendPrivateMessage(_ui.TargetUserIdInput.value, _ui.MessageInput.value);
+        // Bergabung ke ruang saat tombol join room diklik
+        _ui.JoinRoomButton.clicked += () => JoinRoom(_ui.RoomIdInput.value); // New handler for joining a room
     }
 
-    /// <summary>
-    /// Memulai koneksi WebSocket dengan mengkonfigurasi dan membuat koneksi.
-    /// </summary>
+    // Memulai koneksi WebSocket
     private void ConnectToWebSocket()
     {
-        _webSocket = new WebSocket(serverUrl); // Membuat instance WebSocket dengan URL server
-        ConfigureWebSocketEvents(); // Menyiapkan event handler untuk WebSocket
-        EstablishConnection(); // Memulai koneksi
+        // Membuat instance WebSocket dengan URL server
+        _webSocket = new WebSocket(serverUrl);
+        // Mengkonfigurasi event handler untuk WebSocket
+        ConfigureWebSocketEvents();
+        // Memulai koneksi
+        EstablishConnection();
     }
 
-    /// <summary>
-    /// Mengkonfigurasi protokol SSL dan event handler untuk koneksi WebSocket.
-    /// Menyiapkan metode callback untuk berbagai kondisi koneksi.
-    /// </summary>
+    // Mengkonfigurasi protokol SSL dan event handler untuk koneksi WebSocket
     private void ConfigureWebSocketEvents()
     {
         // Mengatur protokol SSL untuk keamanan koneksi
-        _webSocket.SslConfiguration.EnabledSslProtocols =
-            System.Security.Authentication.SslProtocols.Tls12;
-
+        _webSocket.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
         // Mendaftarkan event handler untuk berbagai kondisi koneksi
         _webSocket.OnOpen += HandleConnectionOpen;
         _webSocket.OnMessage += HandleIncomingMessage;
@@ -130,15 +128,13 @@ public class WebSocketManager : MonoBehaviour
         _webSocket.OnClose += HandleConnectionClosed;
     }
 
-    /// <summary>
-    /// Mencoba membuat koneksi WebSocket.
-    /// Menangkap dan mencatat kesalahan jika koneksi gagal.
-    /// </summary>
+    // Mencoba membuat koneksi WebSocket
     private void EstablishConnection()
     {
         try
         {
-            _webSocket.Connect(); // Memulai koneksi WebSocket
+            // Memulai koneksi WebSocket
+            _webSocket.Connect();
         }
         catch (Exception ex)
         {
@@ -147,187 +143,171 @@ public class WebSocketManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Menangani event saat koneksi WebSocket berhasil dibuka.
-    /// Memperbarui status koneksi dan mengirim permintaan bergabung.
-    /// </summary>
+    // Menangani event saat koneksi WebSocket berhasil dibuka
     private void HandleConnectionOpen(object sender, EventArgs e)
     {
         // Memastikan pembaruan dilakukan di thread utama Unity
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
+            // Memperbarui status koneksi menjadi terhubung
             UpdateConnectionStatus("Terhubung", Color.green);
-            SendJoinRequest(); // Mengirim permintaan untuk bergabung ke ruang
+            // Mengirim permintaan bergabung ke ruang
+            SendJoinRequest();
         });
     }
 
-    /// <summary>
-    /// Menangani pesan masuk dari server WebSocket.
-    /// Memastikan pemrosesan pesan dilakukan di thread utama Unity.
-    /// </summary>
+    // Menangani pesan masuk dari server WebSocket
     private void HandleIncomingMessage(object sender, MessageEventArgs e)
     {
+        // Memastikan pemrosesan pesan dilakukan di thread utama Unity
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
+            // Memproses pesan dari server
             ProcessServerMessage(e.Data);
         });
     }
 
-    /// <summary>
-    /// Menangani kesalahan koneksi WebSocket.
-    /// Memperbarui status koneksi dengan informasi kesalahan.
-    /// </summary>
+    // Menangani kesalahan koneksi WebSocket
     private void HandleConnectionError(object sender, ErrorEventArgs e)
     {
+        // Memastikan pembaruan dilakukan di thread utama Unity
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
+            // Memperbarui status koneksi dengan pesan kesalahan
             UpdateConnectionStatus($"Kesalahan: {e.Message}", Color.red);
         });
     }
 
-    /// <summary>
-    /// Menangani penutupan koneksi WebSocket.
-    /// Memperbarui status koneksi sebagai terputus.
-    /// </summary>
+    // Menangani penutupan koneksi WebSocket
     private void HandleConnectionClosed(object sender, CloseEventArgs e)
     {
+        // Memastikan pembaruan dilakukan di thread utama Unity
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
         {
+            // Memperbarui status koneksi menjadi terputus
             UpdateConnectionStatus("Terputus", Color.yellow);
         });
     }
 
-    /// <summary>
-    /// Mengirim permintaan bergabung ke ruang dengan token otentikasi.
-    /// </summary>
+    // Mengirim permintaan bergabung ke ruang
     private void SendJoinRequest()
     {
+        // Mengirim pesan "join" ke server dengan data ruang dan token autentikasi
         SendMessage("join", new Dictionary<string, string>
         {
-            { "roomId", defaultRoomId },
+            { "roomId", _currentRoomId },
             { "authToken", authToken }
         });
     }
 
-    /// <summary>
-    /// Memperbarui label status koneksi dengan warna dan pesan yang diberikan.
-    /// Mencatat pesan status ke log.
-    /// </summary>
-    /// <param name="status">Pesan status koneksi</param>
-    /// <param name="color">Warna label status</param>
+    // Memperbarui label status koneksi
     private void UpdateConnectionStatus(string status, Color color)
     {
+        // Mengatur teks status koneksi
         _ui.ConnectionStatus.text = status;
+        // Mengatur warna teks status koneksi
         _ui.ConnectionStatus.style.color = new StyleColor(color);
+        // Mencatat pesan status ke log
         LogMessage($"[STATUS] {status}");
     }
 
-    /// <summary>
-    /// Memproses pesan yang diterima dari server.
-    /// Melakukan parsing JSON dan menangani event spesifik.
-    /// </summary>
-    /// <param name="message">Pesan JSON dari server</param>
+    // Memproses pesan yang diterima dari server
     private void ProcessServerMessage(string message)
     {
         try
         {
             // Mengurai pesan JSON menjadi array objek
             var messageArray = JsonConvert.DeserializeObject<object[]>(message);
+            // Jika array null atau kosong, tampilkan pesan kesalahan
             if (messageArray == null || messageArray.Length < 1)
             {
                 LogMessage("[KESALAHAN] Format pesan tidak valid.");
                 return;
             }
-
             // Ekstrak nama event dan data
             string eventName = messageArray[0].ToString();
             object eventData = messageArray.Length > 1 ? messageArray[1] : null;
-
             // Tangani event spesifik
             HandleSpecificServerEvent(eventName, eventData);
         }
         catch (Exception ex)
         {
+            // Tampilkan pesan kesalahan jika terjadi kesalahan saat memproses pesan
             Debug.LogError($"Kesalahan pemrosesan pesan: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Menangani berbagai jenis event yang diterima dari server.
-    /// </summary>
-    /// <param name="eventName">Nama event</param>
-    /// <param name="eventData">Data terkait event</param>
+    // Menangani berbagai jenis event yang diterima dari server
     private void HandleSpecificServerEvent(string eventName, object eventData)
     {
         switch (eventName)
         {
             case "welcome":
+                // Menangani event selamat datang
                 HandleWelcomeEvent(eventData);
                 break;
             case "message":
+                // Menangani pesan broadcast
                 HandleBroadcastMessage(eventData);
                 break;
             case "privateMessage":
+                // Menangani pesan pribadi
                 HandlePrivateMessage(eventData);
                 break;
             case "error":
+                // Mencatat pesan kesalahan ke log
                 LogMessage($"[KESALAHAN] {eventData}");
                 break;
             default:
-                LogMessage($"[TIDAK DIKENALI] Event: {eventName}, Data: {JsonConvert.SerializeObject(eventData)}");
+                // Mengabaikan event lainnya
+                // Ignore other events
                 break;
         }
     }
 
-    /// <summary>
-    /// Menangani event selamat datang dari server.
-    /// Menyimpan ID klien yang diberikan oleh server.
-    /// </summary>
-    /// <param name="eventData">Data selamat datang dari server</param>
+    // Menangani event selamat datang dari server
     private void HandleWelcomeEvent(object eventData)
     {
+        // Mengurai data selamat datang menjadi objek JSON
         var welcomeData = JObject.Parse(eventData.ToString());
+        // Menyimpan ID klien yang diberikan oleh server
         _clientId = welcomeData["welcome"].ToString();
-        LogMessage($"[SELAMAT DATANG] {_clientId}");
+        // Mencatat pesan selamat datang ke log
+        LogMessage($"Selamat datang! ID Anda: {_clientId}");
     }
 
-    /// <summary>
-    /// Menangani pesan broadcast yang diterima dari server.
-    /// Mencatat pesan ke log dengan informasi pengirim.
-    /// </summary>
-    /// <param name="eventData">Data pesan broadcast</param>
+    // Menangani pesan broadcast yang diterima dari server
     private void HandleBroadcastMessage(object eventData)
     {
+        // Jika data adalah objek JSON
         if (eventData is JObject broadcastData)
         {
+            // Ekstrak pengirim dan isi pesan
             string from = broadcastData["from"]?.ToString();
             string content = broadcastData["message"]?.ToString();
+            // Mencatat pesan broadcast ke log
             LogMessage($"[BROADCAST] {from}: {content}");
         }
     }
 
-    /// <summary>
-    /// Menangani pesan pribadi yang diterima dari server.
-    /// Mencatat pesan ke log dengan informasi pengirim.
-    /// </summary>
-    /// <param name="eventData">Data pesan pribadi</param>
+    // Menangani pesan pribadi yang diterima dari server
     private void HandlePrivateMessage(object eventData)
     {
+        // Jika data adalah objek JSON
         if (eventData is JObject privateMessageData)
         {
+            // Ekstrak pengirim dan isi pesan
             string from = privateMessageData["from"]?.ToString();
             string content = privateMessageData["message"]?.ToString();
+            // Mencatat pesan pribadi ke log
             LogMessage($"[PRIBADI] {from}: {content}");
         }
     }
 
-    /// <summary>
-    /// Mencatat pesan ke log UI dengan timestamp.
-    /// Menambahkan entri log baru ke ScrollView dan menggulung ke bawah.
-    /// </summary>
-    /// <param name="message">Pesan yang akan dicatat</param>
+    // Mencatat pesan ke log UI dengan timestamp
     private void LogMessage(string message)
     {
+        // Membuat label untuk entri log
         var logEntry = new Label($"[{DateTime.Now:HH:mm:ss}] {message}")
         {
             style =
@@ -339,70 +319,87 @@ public class WebSocketManager : MonoBehaviour
             },
             pickingMode = PickingMode.Position
         };
-
+        // Menambahkan entri log ke ScrollView
         _ui.MessageLog.contentContainer.Add(logEntry);
+        // Menggulung ScrollView ke entri log terbaru
         _ui.MessageLog.ScrollTo(logEntry);
+        // Mengatur nilai scroller horizontal ke nilai maksimum
         _ui.MessageLog.horizontalScroller.value = _ui.MessageLog.horizontalScroller.highValue;
     }
 
-    /// <summary>
-    /// Metode umum untuk mengirim pesan ke server WebSocket.
-    /// Memastikan koneksi terbuka sebelum mengirim.
-    /// </summary>
-    /// <param name="eventName">Nama event</param>
-    /// <param name="data">Data yang akan dikirim</param>
-    private new void SendMessage(string eventName, object data)
+    // Metode umum untuk mengirim pesan ke server WebSocket
+    private void SendMessage(string eventName, object data)
     {
+        // Jika WebSocket null atau tidak terhubung, tampilkan pesan kesalahan
         if (_webSocket == null || _webSocket.ReadyState != WebSocketState.Open)
         {
             LogMessage("WebSocket tidak terhubung. Tidak dapat mengirim pesan.");
             return;
         }
-
+        // Membuat array pesan dengan nama event dan data
         var message = new[] { eventName, data };
+        // Mengubah array pesan menjadi JSON
         string jsonMessage = JsonConvert.SerializeObject(message);
+        // Mengirim pesan ke server
         _webSocket.Send(jsonMessage);
     }
 
-    /// <summary>
-    /// Mengirim pesan broadcast ke semua pengguna dalam ruang.
-    /// Memvalidasi isi pesan sebelum mengirim.
-    /// </summary>
-    /// <param name="message">Isi pesan broadcast</param>
+    // Mengirim pesan broadcast ke semua pengguna dalam ruang
     private void SendBroadcastMessage(string message)
     {
+        // Jika pesan kosong, kembalikan tanpa melakukan apa-apa
         if (string.IsNullOrWhiteSpace(message)) return;
-
+        // Mengirim pesan broadcast ke server dengan data yang diperlukan
         SendMessage("broadcast", new
         {
             message = message,
-            authToken = authToken
+            authToken = authToken,
+            roomId = _currentRoomId
         });
-
+        // Mengosongkan bidang input pesan
         _ui.MessageInput.value = string.Empty;
     }
 
+    // Mengirim pesan pribadi ke pengguna tertentu
     private void SendPrivateMessage(string targetId, string message)
     {
+        // Jika pesan atau ID target kosong, kembalikan tanpa melakukan apa-apa
         if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(targetId)) return;
-
+        // Mengirim pesan pribadi ke server dengan data yang diperlukan
         SendMessage("privateMessage", new
         {
             targetId = targetId,
             message = message,
             authToken = authToken
         });
-
-        LogMessage($"[SENT] PrivateMessage to {targetId}: {message}");
+        // Mencatat pesan pribadi yang dikirim ke log
+        LogMessage($"Pesan pribadi terkirim ke {targetId}: {message}");
+        // Mengosongkan bidang input pesan
         _ui.MessageInput.value = string.Empty;
     }
 
+    // Bergabung ke ruang yang ditentukan
+    private void JoinRoom(string roomId)
+    {
+        // Jika ID ruang kosong, kembalikan tanpa melakukan apa-apa
+        if (string.IsNullOrWhiteSpace(roomId)) return;
+        // Mengatur ID ruang saat ini
+        _currentRoomId = roomId;
+        // Mengirim permintaan bergabung ke ruang
+        SendJoinRequest();
+        // Mencatat pesan bergabung ke ruang ke log
+        LogMessage($"Bergabung ke ruang: {roomId}");
+    }
+
+    // Metode yang dipanggil saat aplikasi ditutup
     private void OnApplicationQuit()
     {
+        // Jika WebSocket terhubung, tutup koneksi
         if (_webSocket != null && _webSocket.ReadyState == WebSocketState.Open)
         {
             _webSocket.Close();
-            LogMessage("WebSocket closed.");
+            // Mencatat pesan penutupan WebSocket ke log
+            LogMessage("WebSocket ditutup.");
         }
     }
 }
