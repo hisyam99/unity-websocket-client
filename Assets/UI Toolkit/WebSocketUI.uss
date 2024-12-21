@@ -115,7 +115,7 @@
     box-shadow: 0 11.86px 22.90px rgba(0, 0, 0, 0.1); /* Doubled from 5.93px and 11.45px */
 }
 .dialog-title {
-    font-size: 44.92px; /* Doubled from 22.46px */
+    font-size: 34.92px; /* Doubled from 22.46px */
     margin-bottom: 29.32px; /* Doubled from 14.66px */
     text-align: center;
     color: #333333;

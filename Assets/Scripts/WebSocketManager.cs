@@ -125,7 +125,7 @@ public class WebSocketManager : MonoBehaviour
         string newRoomId = _ui.PopupRoomIdInput.value;
         if (string.IsNullOrWhiteSpace(newUsername) || string.IsNullOrWhiteSpace(newRoomId))
         {
-            LogMessage("Username dan Room ID harus diisi.");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Username dan Room ID harus diisi.");
             return;
         }
         HidePopupDialog();
@@ -144,7 +144,7 @@ public class WebSocketManager : MonoBehaviour
         HidePopupDialog();
         if (_isFirstTime)
         {
-            LogMessage("Anda harus memasukkan Username dan Room ID untuk melanjutkan.");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Anda harus memasukkan Username dan Room ID untuk melanjutkan.");
         }
     }
 
@@ -245,7 +245,7 @@ public class WebSocketManager : MonoBehaviour
     {
         _ui.ConnectionStatus.text = status;
         _ui.ConnectionStatus.style.color = new StyleColor(color);
-        LogMessage($"[STATUS] {status}");
+        LogMessage($"[{DateTime.Now:HH:mm:ss}] [STATUS] {status}");
     }
 
     private void ProcessServerMessage(string message)
@@ -255,7 +255,7 @@ public class WebSocketManager : MonoBehaviour
             var messageArray = JsonConvert.DeserializeObject<object[]>(message);
             if (messageArray == null || messageArray.Length < 1)
             {
-                LogMessage("[KESALAHAN] Format pesan tidak valid.");
+                LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Format pesan tidak valid.");
                 return;
             }
             string eventName = messageArray[0].ToString();
@@ -282,7 +282,7 @@ public class WebSocketManager : MonoBehaviour
                 HandlePrivateMessage(eventData);
                 break;
             case "error":
-                LogMessage($"[KESALAHAN] {eventData}");
+                LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] {eventData}");
                 break;
             default:
                 // Ignore other events
@@ -296,7 +296,7 @@ public class WebSocketManager : MonoBehaviour
         {
             _clientId = welcomeData["id"]?.ToString();
             string welcomeMessage = welcomeData["message"]?.ToString();
-            LogMessage(welcomeMessage); // Menampilkan pesan selamat datang dari server
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [WELCOME] {welcomeMessage}");
         }
     }
 
@@ -314,7 +314,7 @@ public class WebSocketManager : MonoBehaviour
             DateTime serverDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(timestamp);
             DateTime localDateTime = serverDateTime.ToLocalTime();
 
-            LogMessage($"[BROADCAST] {localDateTime:HH:mm:ss} - {username} ({from}): {content}");
+            LogMessage($"[{localDateTime:HH:mm:ss}] [BROADCAST] - {username} ({from}): {content}");
         }
     }
 
@@ -325,7 +325,7 @@ public class WebSocketManager : MonoBehaviour
             string from = privateMessageData["from"]?.ToString();
             string username = privateMessageData["username"]?.ToString();
             string content = privateMessageData["message"]?.ToString();
-            LogMessage($"[PRIBADI] {username} ({from}): {content}");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [PRIBADI] - {username} ({from}): {content}");
         }
     }
 
@@ -333,7 +333,7 @@ public class WebSocketManager : MonoBehaviour
     {
         var logEntry = new TextField
         {
-            value = $"[{DateTime.Now:HH:mm:ss}] {message}",
+            value = message,
             style =
             {
                 marginTop = 5,
@@ -361,7 +361,7 @@ public class WebSocketManager : MonoBehaviour
     {
         if (_webSocket == null || _webSocket.ReadyState != WebSocketState.Open)
         {
-            LogMessage("WebSocket tidak terhubung. Tidak dapat mengirim pesan.");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] WebSocket tidak terhubung. Tidak dapat mengirim pesan.");
             return;
         }
         var message = new[] { eventName, data };
@@ -385,7 +385,7 @@ public class WebSocketManager : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(targetId))
         {
-            LogMessage("Pesan dan ID target harus diisi.");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Pesan dan ID target harus diisi.");
             return;
         }
         SendMessage("privateMessage", new
@@ -394,7 +394,7 @@ public class WebSocketManager : MonoBehaviour
             message = message,
             authToken = authToken
         });
-        LogMessage($"Pesan pribadi terkirim ke {targetId}: {message}");
+        LogMessage($"[{DateTime.Now:HH:mm:ss}] [PRIBADI] Pesan pribadi terkirim ke {targetId}: {message}");
         _ui.MessageInput.value = string.Empty;
     }
 
@@ -403,7 +403,7 @@ public class WebSocketManager : MonoBehaviour
         if (_webSocket != null && _webSocket.ReadyState == WebSocketState.Open)
         {
             _webSocket.Close();
-            LogMessage("WebSocket ditutup.");
+            LogMessage($"[{DateTime.Now:HH:mm:ss}] [STATUS] WebSocket ditutup.");
         }
     }
 }
