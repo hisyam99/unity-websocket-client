@@ -1,0 +1,111 @@
+.container {
+    flex-grow: 1;
+    padding: 8px;
+    background-color: rgb(44, 44, 44);
+    color: rgb(255, 255, 255);
+}
+
+.connection-status {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+}
+
+.message-log {
+    flex-grow: 1;
+    background-color: rgb(28, 28, 28);
+    border-radius: 5px;
+    padding: 6px;
+    margin-bottom: 8px;
+    overflow: scroll;
+    white-space: nowrap; /* Mencegah text wrap untuk mendukung scroll horizontal */
+}
+
+.message-log > .unity-scroll-view__content-container {
+    display: inline-block; /* Pastikan isi dapat diperluas melewati batas horizontal */
+    width: auto;
+    padding: 4px;
+    white-space: nowrap; /* Mencegah pemotongan teks */
+}
+
+.input-container {
+    flex-direction: column;
+}
+
+.room-id-input {
+    margin-bottom: 8px;
+}
+
+.room-id-input .unity-text-input {
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.user-id-input {
+    margin-bottom: 8px;
+}
+
+.user-id-input .unity-text-input {
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.message-input {
+    margin-bottom: 8px;
+}
+
+.message-input .unity-text-input {
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.button-group {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.button {
+    padding: 6px;
+    border-radius: 4px;
+    min-width: 80px;
+    font-size: 12px;
+}
+
+.broadcast-button {
+    background-color: rgb(76, 175, 80);
+    color: rgb(255, 255, 255);
+}
+
+.private-message-button {
+    background-color: rgb(33, 150, 243);
+    color: rgb(255, 255, 255);
+}
+
+.join-room-button {
+    background-color: rgb(255, 152, 0);
+    color: rgb(255, 255, 255);
+}
+
+/* Tambahan untuk responsiveness di layar kecil */
+@media (max-width: 480px) {
+    .container {
+        padding: 6px;
+    }
+    .connection-status {
+        font-size: 12px;
+    }
+    .button {
+        min-width: 70px;
+        padding: 4px;
+        font-size: 11px;
+    }
+}
