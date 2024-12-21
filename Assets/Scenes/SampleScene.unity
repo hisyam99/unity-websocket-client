@@ -151,6 +151,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   uiDocument: {fileID: 57020734}
+  serverUrl: wss://hisyam99-websockettest.deno.dev
+  authToken: 12345
 --- !u!114 &57020734
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,5 +1,3 @@
-// File 1: /Assets/Scripts/UnityMainThreadDispatcher.cs
-
 using UnityEngine;
 using System;
 using System.Collections.Concurrent;
