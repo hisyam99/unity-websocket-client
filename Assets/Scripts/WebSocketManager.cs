@@ -4,6 +4,7 @@ using WebSocketSharp;
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 public class WebSocketManager : MonoBehaviour
 {
@@ -126,6 +127,7 @@ public class WebSocketManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(newUsername) || string.IsNullOrWhiteSpace(newRoomId))
         {
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Username dan Room ID harus diisi.");
+            AddNewLineToMessageLog();
             return;
         }
         HidePopupDialog();
@@ -145,6 +147,7 @@ public class WebSocketManager : MonoBehaviour
         if (_isFirstTime)
         {
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Anda harus memasukkan Username dan Room ID untuk melanjutkan.");
+            AddNewLineToMessageLog();
         }
     }
 
@@ -246,6 +249,7 @@ public class WebSocketManager : MonoBehaviour
         _ui.ConnectionStatus.text = status;
         _ui.ConnectionStatus.style.color = new StyleColor(color);
         LogMessage($"[{DateTime.Now:HH:mm:ss}] [STATUS] {status}");
+        AddNewLineToMessageLog();
     }
 
     private void ProcessServerMessage(string message)
@@ -256,6 +260,7 @@ public class WebSocketManager : MonoBehaviour
             if (messageArray == null || messageArray.Length < 1)
             {
                 LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Format pesan tidak valid.");
+                AddNewLineToMessageLog();
                 return;
             }
             string eventName = messageArray[0].ToString();
@@ -283,6 +288,7 @@ public class WebSocketManager : MonoBehaviour
                 break;
             case "error":
                 LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] {eventData}");
+                AddNewLineToMessageLog();
                 break;
             default:
                 // Ignore other events
@@ -297,6 +303,7 @@ public class WebSocketManager : MonoBehaviour
             _clientId = welcomeData["id"]?.ToString();
             string welcomeMessage = welcomeData["message"]?.ToString();
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [WELCOME] {welcomeMessage}");
+            AddNewLineToMessageLog();
         }
     }
 
@@ -315,6 +322,7 @@ public class WebSocketManager : MonoBehaviour
             DateTime localDateTime = serverDateTime.ToLocalTime();
 
             LogMessage($"[{localDateTime:HH:mm:ss}] [BROADCAST] - {username} ({from}): {content}");
+            AddNewLineToMessageLog();
         }
     }
 
@@ -326,27 +334,148 @@ public class WebSocketManager : MonoBehaviour
             string username = privateMessageData["username"]?.ToString();
             string content = privateMessageData["message"]?.ToString();
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [PRIBADI] - {username} ({from}): {content}");
+            AddNewLineToMessageLog();
         }
     }
 
     private void LogMessage(string message)
     {
-        var logEntry = new Label(message)
+        // Memisahkan username, userId, dan pesan dari pesan
+        string pattern = @"\[(\d{2}:\d{2}:\d{2})\] \[(\w+)\] - (.+?) \(([^)]+)\)";
+        Match match = Regex.Match(message, pattern);
+
+        if (match.Success)
+        {
+            string time = match.Groups[1].Value;
+            string type = match.Groups[2].Value;
+            string username = match.Groups[3].Value;
+            string userId = match.Groups[4].Value;
+
+            // Memisahkan bagian pesan dari sisa pesan
+            string[] parts = message.Split(new[] { ": " }, 2, StringSplitOptions.None);
+            string timeTypePart = $"[{time}] [{type}]";
+            string userIdPart = $"{username} ({userId})";
+            string contentPart = parts.Length > 1 ? parts[1] : string.Empty;
+
+            // Membuat Label untuk waktu dan tipe
+            var timeTypeLabel = new Label(timeTypePart)
+            {
+                style =
+                {
+                    marginTop = 5,
+                    marginBottom = 5,
+                    color = new StyleColor(Color.black),
+                    unityFontStyleAndWeight = FontStyle.Normal,
+                    whiteSpace = WhiteSpace.Normal,
+                    maxWidth = Length.Percent(100)
+                },
+                pickingMode = PickingMode.Position
+            };
+
+            // Membuat TextField untuk username dan userId
+            var userIdField = new TextField
+            {
+                value = userIdPart,
+                style =
+                {
+                    marginTop = 5,
+                    marginBottom = 5,
+                    color = new StyleColor(Color.black),
+                    unityFontStyleAndWeight = FontStyle.Normal,
+                    maxWidth = Length.Percent(100),
+                    // Menghilangkan border dan background agar terlihat seperti Label
+                    borderBottomWidth = 0,
+                    borderTopWidth = 0,
+                    borderLeftWidth = 0,
+                    borderRightWidth = 0,
+                    backgroundColor = new StyleColor(Color.clear),
+                    // Memastikan teks tidak dapat diedit
+                    unityTextAlign = TextAnchor.MiddleLeft
+                },
+                isReadOnly = true,
+                multiline = false,
+                pickingMode = PickingMode.Position
+            };
+
+            // Membuat Label untuk isi pesan
+            var messageLabel = new Label(contentPart)
+            {
+                style =
+                {
+                    marginTop = 5,
+                    marginBottom = 5,
+                    color = new StyleColor(Color.black),
+                    unityFontStyleAndWeight = FontStyle.Normal,
+                    whiteSpace = WhiteSpace.Normal, // Mengaktifkan wrap text
+                    maxWidth = Length.Percent(100)
+                },
+                pickingMode = PickingMode.Position
+            };
+
+            // Membuat container untuk mengelompokkan Label untuk waktu dan tipe, TextField untuk username dan userId, dan Label untuk pesan
+            var container = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Column,
+                    alignItems = Align.FlexStart
+                }
+            };
+
+            container.Add(timeTypeLabel);
+            container.Add(userIdField);
+            container.Add(messageLabel);
+
+            // Menambahkan container ke message log
+            _ui.MessageLog.contentContainer.Add(container);
+
+            // Scroll ke container terbaru
+            _ui.MessageLog.ScrollTo(container);
+        }
+        else
+        {
+            // Jika format pesan tidak sesuai, tambahkan pesan keseluruhan sebagai TextField
+            var fullMessageField = new TextField
+            {
+                value = message,
+                style =
+                {
+                    marginTop = 5,
+                    marginBottom = 5,
+                    color = new StyleColor(Color.black),
+                    unityFontStyleAndWeight = FontStyle.Normal,
+                    maxWidth = Length.Percent(100),
+                    // Menghilangkan border dan background agar terlihat seperti Label
+                    borderBottomWidth = 0,
+                    borderTopWidth = 0,
+                    borderLeftWidth = 0,
+                    borderRightWidth = 0,
+                    backgroundColor = new StyleColor(Color.clear),
+                    // Memastikan teks tidak dapat diedit
+                    unityTextAlign = TextAnchor.MiddleLeft
+                },
+                isReadOnly = true,
+                multiline = true,
+                pickingMode = PickingMode.Position
+            };
+
+            _ui.MessageLog.contentContainer.Add(fullMessageField);
+            _ui.MessageLog.ScrollTo(fullMessageField);
+        }
+    }
+
+    private void AddNewLineToMessageLog()
+    {
+        var newline = new Label("\n")
         {
             style =
-        {
-            marginTop = 5,
-            marginBottom = 5,
-            color = new StyleColor(Color.black),
-            unityFontStyleAndWeight = FontStyle.Normal,
-            whiteSpace = WhiteSpace.Normal, // Mengaktifkan wrap text
-            maxWidth = Length.Percent(100)
-        },
-            pickingMode = PickingMode.Position
+            {
+                whiteSpace = WhiteSpace.Pre,
+                unityFontStyleAndWeight = FontStyle.Normal
+            },
+            pickingMode = PickingMode.Ignore
         };
-
-        _ui.MessageLog.contentContainer.Add(logEntry);
-        _ui.MessageLog.ScrollTo(logEntry);
+        _ui.MessageLog.contentContainer.Add(newline);
     }
 
     private new void SendMessage(string eventName, object data)
@@ -354,6 +483,7 @@ public class WebSocketManager : MonoBehaviour
         if (_webSocket == null || _webSocket.ReadyState != WebSocketState.Open)
         {
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] WebSocket tidak terhubung. Tidak dapat mengirim pesan.");
+            AddNewLineToMessageLog();
             return;
         }
         var message = new[] { eventName, data };
@@ -378,6 +508,7 @@ public class WebSocketManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(targetId))
         {
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [KESALAHAN] Pesan dan ID target harus diisi.");
+            AddNewLineToMessageLog();
             return;
         }
         SendMessage("privateMessage", new
@@ -387,6 +518,7 @@ public class WebSocketManager : MonoBehaviour
             authToken = authToken
         });
         LogMessage($"[{DateTime.Now:HH:mm:ss}] [PRIBADI] Pesan pribadi terkirim ke {targetId}: {message}");
+        AddNewLineToMessageLog();
         _ui.MessageInput.value = string.Empty;
     }
 
@@ -396,6 +528,7 @@ public class WebSocketManager : MonoBehaviour
         {
             _webSocket.Close();
             LogMessage($"[{DateTime.Now:HH:mm:ss}] [STATUS] WebSocket ditutup.");
+            AddNewLineToMessageLog();
         }
     }
 }

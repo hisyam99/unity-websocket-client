@@ -17,7 +17,8 @@
     border-radius: 11.86px; /* Doubled from 5.93px */
 }
 .message-log {
-    flex-grow: 1;
+    /* Mengatur tinggi tetap */
+    height: 75%; /* Sesuaikan dengan kebutuhan Anda */
     background-color: #ffffff;
     border-radius: 11.86px; /* Doubled from 5.93px */
     padding: 22.90px; /* Doubled from 11.45px */
@@ -25,18 +26,15 @@
     overflow-y: auto;
     border: 1px solid #e0e0e0;
     font-size: 33.92px; /* Doubled from 16.96px */
-    
     /* Tambahan untuk memungkinkan wrap text */
     white-space: normal;
     word-wrap: break-word;
 }
-
 .message-log Label {
     /* Pastikan setiap Label di dalam .message-log dapat membungkus teks */
     white-space: normal;
     word-wrap: break-word;
 }
-
 .input-container {
     flex-direction: column;
 }
@@ -115,7 +113,7 @@
     box-shadow: 0 11.86px 22.90px rgba(0, 0, 0, 0.1); /* Doubled from 5.93px and 11.45px */
 }
 .dialog-title {
-    font-size: 34.92px; /* Doubled from 22.46px */
+    font-size: 34.92px;
     margin-bottom: 29.32px; /* Doubled from 14.66px */
     text-align: center;
     color: #333333;
@@ -150,12 +148,10 @@
     cursor: pointer;
     transition: background-color 0.3s;
 }
-
 .dialog-button.no-margin-right,
 .exit-dialog-button.no-margin-right {
     margin-right: 0;
 }
-
 .dialog-button:hover,
 .exit-dialog-button:hover {
     background-color: #e0e0e0;
