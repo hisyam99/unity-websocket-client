@@ -16,6 +16,7 @@ public class WebSocketManager : MonoBehaviour
     private string _currentRoomId = string.Empty;
     private string _username = string.Empty;
     private bool _isFirstTime = true;
+
     private class UIElements
     {
         public Label ConnectionStatus;
@@ -34,12 +35,14 @@ public class WebSocketManager : MonoBehaviour
         public Button ExitConfirmButton;
         public Button ExitCancelButton;
     }
+
     private void Awake()
     {
         ValidateUIDocument();
         InitializeUIReferences();
         SetupUIEventHandlers();
     }
+
     private void Start()
     {
         Application.runInBackground = true;
@@ -52,6 +55,7 @@ public class WebSocketManager : MonoBehaviour
             ConnectToWebSocket();
         }
     }
+
     private void ValidateUIDocument()
     {
         if (uiDocument == null)
@@ -60,6 +64,7 @@ public class WebSocketManager : MonoBehaviour
             enabled = false;
         }
     }
+
     private void InitializeUIReferences()
     {
         var root = uiDocument.rootVisualElement;
@@ -82,6 +87,7 @@ public class WebSocketManager : MonoBehaviour
             ExitCancelButton = root.Q<Button>("exitCancelButton")
         };
     }
+
     private void SetupUIEventHandlers()
     {
         _ui.BroadcastButton.RegisterCallback<ClickEvent>(_ => SendBroadcastMessage(_ui.MessageInput.value));
@@ -92,22 +98,27 @@ public class WebSocketManager : MonoBehaviour
         _ui.ExitConfirmButton.RegisterCallback<ClickEvent>(_ => OnExitConfirmClicked());
         _ui.ExitCancelButton.RegisterCallback<ClickEvent>(_ => OnExitCancelClicked());
     }
+
     private void ShowPopupDialog()
     {
         _ui.PopupDialog.style.visibility = Visibility.Visible;
     }
+
     private void HidePopupDialog()
     {
         _ui.PopupDialog.style.visibility = Visibility.Hidden;
     }
+
     private void ShowExitPopupDialog()
     {
         _ui.ExitPopupDialog.style.visibility = Visibility.Visible;
     }
+
     private void HideExitPopupDialog()
     {
         _ui.ExitPopupDialog.style.visibility = Visibility.Hidden;
     }
+
     private void OnPopupJoinClicked()
     {
         string newUsername = _ui.PopupUsernameInput.value;
@@ -127,6 +138,7 @@ public class WebSocketManager : MonoBehaviour
         }
         ConnectToWebSocket();
     }
+
     private void OnPopupCancelClicked()
     {
         HidePopupDialog();
@@ -135,15 +147,18 @@ public class WebSocketManager : MonoBehaviour
             LogMessage("Anda harus memasukkan Username dan Room ID untuk melanjutkan.");
         }
     }
+
     private void OnExitConfirmClicked()
     {
         HideExitPopupDialog();
         Application.Quit();
     }
+
     private void OnExitCancelClicked()
     {
         HideExitPopupDialog();
     }
+
     private void Update()
     {
         if (Application.platform == RuntimePlatform.Android)
@@ -154,12 +169,14 @@ public class WebSocketManager : MonoBehaviour
             }
         }
     }
+
     private void ConnectToWebSocket()
     {
         _webSocket = new WebSocket(serverUrl);
         ConfigureWebSocketEvents();
         EstablishConnection();
     }
+
     private void ConfigureWebSocketEvents()
     {
         _webSocket.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
@@ -168,6 +185,7 @@ public class WebSocketManager : MonoBehaviour
         _webSocket.OnError += HandleConnectionError;
         _webSocket.OnClose += HandleConnectionClosed;
     }
+
     private void EstablishConnection()
     {
         try
@@ -179,6 +197,7 @@ public class WebSocketManager : MonoBehaviour
             UpdateConnectionStatus($"Koneksi gagal: {ex.Message}", Color.red);
         }
     }
+
     private void HandleConnectionOpen(object sender, EventArgs e)
     {
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
@@ -187,6 +206,7 @@ public class WebSocketManager : MonoBehaviour
             SendJoinRequest();
         });
     }
+
     private void HandleIncomingMessage(object sender, MessageEventArgs e)
     {
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
@@ -194,6 +214,7 @@ public class WebSocketManager : MonoBehaviour
             ProcessServerMessage(e.Data);
         });
     }
+
     private void HandleConnectionError(object sender, ErrorEventArgs e)
     {
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
@@ -201,6 +222,7 @@ public class WebSocketManager : MonoBehaviour
             UpdateConnectionStatus($"Kesalahan: {e.Message}", Color.red);
         });
     }
+
     private void HandleConnectionClosed(object sender, CloseEventArgs e)
     {
         UnityMainThreadDispatcher.Instance().Enqueue(() =>
@@ -208,6 +230,7 @@ public class WebSocketManager : MonoBehaviour
             UpdateConnectionStatus("Terputus", Color.yellow);
         });
     }
+
     private void SendJoinRequest()
     {
         SendMessage("join", new
@@ -217,12 +240,14 @@ public class WebSocketManager : MonoBehaviour
             username = _username
         });
     }
+
     private void UpdateConnectionStatus(string status, Color color)
     {
         _ui.ConnectionStatus.text = status;
         _ui.ConnectionStatus.style.color = new StyleColor(color);
         LogMessage($"[STATUS] {status}");
     }
+
     private void ProcessServerMessage(string message)
     {
         try
@@ -242,6 +267,7 @@ public class WebSocketManager : MonoBehaviour
             Debug.LogError($"Kesalahan pemrosesan pesan: {ex.Message}");
         }
     }
+
     private void HandleSpecificServerEvent(string eventName, object eventData)
     {
         switch (eventName)
@@ -263,15 +289,17 @@ public class WebSocketManager : MonoBehaviour
                 break;
         }
     }
+
     private void HandleWelcomeEvent(object eventData)
     {
         if (eventData is JObject welcomeData)
         {
             _clientId = welcomeData["id"]?.ToString();
             string welcomeMessage = welcomeData["message"]?.ToString();
-            LogMessage($"Selamat datang! ID Anda: {_clientId}. Pesan: {welcomeMessage}");
+            LogMessage(welcomeMessage); // Menampilkan pesan selamat datang dari server
         }
     }
+
     private void HandleBroadcastMessage(object eventData)
     {
         if (eventData is JObject broadcastData)
@@ -281,10 +309,15 @@ public class WebSocketManager : MonoBehaviour
             string content = broadcastData["message"]?.ToString();
             string messageId = broadcastData["id"]?.ToString();
             long timestamp = broadcastData["timestamp"] != null ? (long)broadcastData["timestamp"] : 0;
-            DateTime dateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(timestamp);
-            LogMessage($"[BROADCAST] {dateTime:HH:mm:ss} - {username} ({from}): {content}");
+
+            // Mengonversi timestamp dari server ke zona waktu lokal client
+            DateTime serverDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(timestamp);
+            DateTime localDateTime = serverDateTime.ToLocalTime();
+
+            LogMessage($"[BROADCAST] {localDateTime:HH:mm:ss} - {username} ({from}): {content}");
         }
     }
+
     private void HandlePrivateMessage(object eventData)
     {
         if (eventData is JObject privateMessageData)
@@ -295,34 +328,35 @@ public class WebSocketManager : MonoBehaviour
             LogMessage($"[PRIBADI] {username} ({from}): {content}");
         }
     }
+
     private void LogMessage(string message)
     {
         var logEntry = new TextField
         {
             value = $"[{DateTime.Now:HH:mm:ss}] {message}",
             style =
-        {
-            marginTop = 5,
-            marginBottom = 5,
-            color = new StyleColor(Color.black),
-            unityFontStyleAndWeight = FontStyle.Normal,
-            maxWidth = Length.Percent(100),
-            // Menghilangkan border dan background agar terlihat seperti Label
-            borderBottomWidth = 0,
-            borderTopWidth = 0,
-            borderLeftWidth = 0,
-            borderRightWidth = 0,
-            backgroundColor = new StyleColor(Color.clear),
-            // Memastikan teks tidak dapat diedit
-            unityTextAlign = TextAnchor.MiddleLeft
-        },
+            {
+                marginTop = 5,
+                marginBottom = 5,
+                color = new StyleColor(Color.black),
+                unityFontStyleAndWeight = FontStyle.Normal,
+                maxWidth = Length.Percent(100),
+                // Menghilangkan border dan background agar terlihat seperti Label
+                borderBottomWidth = 0,
+                borderTopWidth = 0,
+                borderLeftWidth = 0,
+                borderRightWidth = 0,
+                backgroundColor = new StyleColor(Color.clear),
+                // Memastikan teks tidak dapat diedit
+                unityTextAlign = TextAnchor.MiddleLeft
+            },
             isReadOnly = true,
             pickingMode = PickingMode.Position
         };
-
         _ui.MessageLog.contentContainer.Add(logEntry);
         _ui.MessageLog.ScrollTo(logEntry);
     }
+
     private new void SendMessage(string eventName, object data)
     {
         if (_webSocket == null || _webSocket.ReadyState != WebSocketState.Open)
@@ -334,6 +368,7 @@ public class WebSocketManager : MonoBehaviour
         string jsonMessage = JsonConvert.SerializeObject(message);
         _webSocket.Send(jsonMessage);
     }
+
     private void SendBroadcastMessage(string message)
     {
         if (string.IsNullOrWhiteSpace(message)) return;
@@ -345,6 +380,7 @@ public class WebSocketManager : MonoBehaviour
         });
         _ui.MessageInput.value = string.Empty;
     }
+
     private void SendPrivateMessage(string targetId, string message)
     {
         if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(targetId))
@@ -361,6 +397,7 @@ public class WebSocketManager : MonoBehaviour
         LogMessage($"Pesan pribadi terkirim ke {targetId}: {message}");
         _ui.MessageInput.value = string.Empty;
     }
+
     private void OnApplicationQuit()
     {
         if (_webSocket != null && _webSocket.ReadyState == WebSocketState.Open)
