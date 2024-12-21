@@ -24,7 +24,7 @@
             <ui:TextField name="popupRoomIdInput" placeholder-text="Room ID" class="dialog-input" />
             <ui:VisualElement class="dialog-button-group">
                 <ui:Button name="popupJoinButton" text="Join" class="dialog-button" />
-                <ui:Button name="popupCancelButton" text="Cancel" class="dialog-button" />
+                <ui:Button name="popupCancelButton" text="Cancel" class="dialog-button no-margin-right" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
@@ -33,7 +33,7 @@
             <ui:Label text="Apakah Anda ingin keluar?" class="exit-dialog-title" />
             <ui:VisualElement class="exit-dialog-button-group">
                 <ui:Button name="exitConfirmButton" text="Ya" class="exit-dialog-button" />
-                <ui:Button name="exitCancelButton" text="Tidak" class="exit-dialog-button" />
+                <ui:Button name="exitCancelButton" text="Tidak" class="exit-dialog-button no-margin-right" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

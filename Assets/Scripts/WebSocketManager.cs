@@ -297,20 +297,31 @@ public class WebSocketManager : MonoBehaviour
     }
     private void LogMessage(string message)
     {
-        var logEntry = new Label($"[{DateTime.Now:HH:mm:ss}] {message}")
+        var logEntry = new TextField
         {
+            value = $"[{DateTime.Now:HH:mm:ss}] {message}",
             style =
-            {
-                marginTop = 5,
-                marginBottom = 5,
-                color = new StyleColor(Color.black),
-                unityFontStyleAndWeight = FontStyle.Normal
-            },
+        {
+            marginTop = 5,
+            marginBottom = 5,
+            color = new StyleColor(Color.black),
+            unityFontStyleAndWeight = FontStyle.Normal,
+            maxWidth = Length.Percent(100),
+            // Menghilangkan border dan background agar terlihat seperti Label
+            borderBottomWidth = 0,
+            borderTopWidth = 0,
+            borderLeftWidth = 0,
+            borderRightWidth = 0,
+            backgroundColor = new StyleColor(Color.clear),
+            // Memastikan teks tidak dapat diedit
+            unityTextAlign = TextAnchor.MiddleLeft
+        },
+            isReadOnly = true,
             pickingMode = PickingMode.Position
         };
+
         _ui.MessageLog.contentContainer.Add(logEntry);
         _ui.MessageLog.ScrollTo(logEntry);
-        _ui.MessageLog.horizontalScroller.value = _ui.MessageLog.horizontalScroller.highValue;
     }
     private new void SendMessage(string eventName, object data)
     {

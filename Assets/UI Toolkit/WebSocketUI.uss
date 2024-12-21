@@ -25,7 +25,18 @@
     overflow-y: auto;
     border: 1px solid #e0e0e0;
     font-size: 33.92px; /* Doubled from 16.96px */
+    
+    /* Tambahan untuk memungkinkan wrap text */
+    white-space: normal;
+    word-wrap: break-word;
 }
+
+.message-log Label {
+    /* Pastikan setiap Label di dalam .message-log dapat membungkus teks */
+    white-space: normal;
+    word-wrap: break-word;
+}
+
 .input-container {
     flex-direction: column;
 }
@@ -123,11 +134,13 @@
     border-color: #2196f3;
     box-shadow: 0 0 0 6.38px rgba(33, 150, 243, 0.2); /* Doubled from 3.19px */
 }
-.dialog-button-group {
+.dialog-button-group,
+.exit-dialog-button-group {
     flex-direction: row;
     justify-content: space-between;
 }
-.dialog-button {
+.dialog-button,
+.exit-dialog-button {
     flex-grow: 1;
     padding: 22.90px; /* Doubled from 11.45px */
     border-radius: 11.86px; /* Doubled from 5.93px */
@@ -137,10 +150,14 @@
     cursor: pointer;
     transition: background-color 0.3s;
 }
-.dialog-button:last-child {
+
+.dialog-button.no-margin-right,
+.exit-dialog-button.no-margin-right {
     margin-right: 0;
 }
-.dialog-button:hover {
+
+.dialog-button:hover,
+.exit-dialog-button:hover {
     background-color: #e0e0e0;
 }
 .exit-popup-dialog {
@@ -168,26 +185,6 @@
     margin-bottom: 29.32px; /* Doubled from 14.66px */
     text-align: center;
     color: #333333;
-}
-.exit-dialog-button-group {
-    flex-direction: row;
-    justify-content: space-between;
-}
-.exit-dialog-button {
-    flex-grow: 1;
-    padding: 22.90px; /* Doubled from 11.45px */
-    border-radius: 11.86px; /* Doubled from 5.93px */
-    font-size: 33.92px; /* Doubled from 16.96px */
-    margin-right: 17.38px; /* Doubled from 8.69px */
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-.exit-dialog-button:last-child {
-    margin-right: 0;
-}
-.exit-dialog-button:hover {
-    background-color: #e0e0e0;
 }
 /* Responsiveness */
 @media (max-width: 480px) {
