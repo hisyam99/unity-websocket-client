@@ -36,7 +36,7 @@ public class KeyboardHandler : MonoBehaviour
 
     private void ShiftUI(bool isKeyboardVisible)
     {
-        float shiftAmount = isKeyboardVisible ? -200f : 0f;
+        float shiftAmount = isKeyboardVisible ? -1000f : 0f;
         inputContainer.style.top = initialPositionY + shiftAmount;
     }
 }

@@ -331,28 +331,20 @@ public class WebSocketManager : MonoBehaviour
 
     private void LogMessage(string message)
     {
-        var logEntry = new TextField
+        var logEntry = new Label(message)
         {
-            value = message,
             style =
-            {
-                marginTop = 5,
-                marginBottom = 5,
-                color = new StyleColor(Color.black),
-                unityFontStyleAndWeight = FontStyle.Normal,
-                maxWidth = Length.Percent(100),
-                // Menghilangkan border dan background agar terlihat seperti Label
-                borderBottomWidth = 0,
-                borderTopWidth = 0,
-                borderLeftWidth = 0,
-                borderRightWidth = 0,
-                backgroundColor = new StyleColor(Color.clear),
-                // Memastikan teks tidak dapat diedit
-                unityTextAlign = TextAnchor.MiddleLeft
-            },
-            isReadOnly = true,
+        {
+            marginTop = 5,
+            marginBottom = 5,
+            color = new StyleColor(Color.black),
+            unityFontStyleAndWeight = FontStyle.Normal,
+            whiteSpace = WhiteSpace.Normal, // Mengaktifkan wrap text
+            maxWidth = Length.Percent(100)
+        },
             pickingMode = PickingMode.Position
         };
+
         _ui.MessageLog.contentContainer.Add(logEntry);
         _ui.MessageLog.ScrollTo(logEntry);
     }
